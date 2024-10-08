@@ -1,59 +1,47 @@
-from pymilvus import Collection, CollectionSchema, FieldSchema, DataType, connections, utility
+from pymilvus import connections, Collection, FieldSchema, CollectionSchema, DataType
 
-# Define Collection Schema for storing vectors
-def create_collection(collection_name="wiki_embeddings"):
+def store_embeddings_in_milvus(embeddings, ids=None, collection_name="default_collection", host='localhost', port='19530'):
+    """
+    Connects to Milvus, deletes existing data in the specified collection (if any), 
+    and inserts new embeddings.
+
+    Args:
+        embeddings (list or numpy.array): Embedding vectors to store.
+        ids (list, optional): List of IDs associated with the embeddings (optional).
+        collection_name (str): Name of the Milvus collection.
+        host (str): Host address of the Milvus instance. Default is 'localhost'.
+        port (str): Port of the Milvus instance. Default is '19530'.
+    """
     # Connect to Milvus
-    try:
-        connections.connect(alias="default", host="127.0.0.1", port="19530", timeout=60)
-        print("Connected to Milvus.")
-    except Exception as e:
-        print(f"Connection failed: {e}")
-        return
+    connections.connect("default", host=host, port=port)
+    
+    # Check if the collection exists
+    if Collection.exists(collection_name):
+        # Load the collection and delete all data
+        collection = Collection(collection_name)
+        collection.drop()
+        print(f"Existing collection '{collection_name}' found and dropped.")
+    else:
+        print(f"No existing collection named '{collection_name}'. Creating a new one.")
 
-    # Drop the collection if it already exists
-    if utility.has_collection(collection_name):
-        print(f"Dropping existing collection: {collection_name}")
-        utility.drop_collection(collection_name)
-
-    # Define the fields for the schema
+    # Define the schema (assuming embeddings are vectors of a certain dimension)
+    dim = len(embeddings[0])  # Assuming all embeddings have the same dimension
     fields = [
-        FieldSchema(name="id", dtype=DataType.INT64, is_primary=True),
-        FieldSchema(name="embedding", dtype=DataType.FLOAT_VECTOR, dim=384),  
-        FieldSchema(name="text", dtype=DataType.VARCHAR, max_length=10000),
+        FieldSchema(name="id", dtype=DataType.INT64, is_primary=True, auto_id=True),
+        FieldSchema(name="embedding", dtype=DataType.FLOAT_VECTOR, dim=dim)
     ]
-
-    # Define the schema
-    schema = CollectionSchema(fields)
-
-    # Create the collection with the new schema
+    schema = CollectionSchema(fields, description="Collection for storing embeddings")
+    
+    # Create the collection
     collection = Collection(name=collection_name, schema=schema)
-
-    print(f"Collection '{collection_name}' created successfully!")
-    return collection
-
-def insert_embeddings(collection, embeddings, paragraphs):
-    ids = list(range(1, len(embeddings) + 1))  # Generating simple incremental IDs
-    entities = [ids, embeddings.tolist(), paragraphs]
-    print(len(embeddings))
-    print(len(paragraphs))
-    print("Entities: ", entities)
-
-
-    # Insert data into the collection
-    try:
-        collection.insert(entities)
-        print("Inserted embeddings!")
-
-        # Create an index on the embedding field
-        index_params = {
-            "index_type": "IVF_FLAT",   
-            "metric_type": "L2",       
-            "params": {"nlist": 128},   
-        }
-
-        # Create the index
-        collection.create_index(field_name="embedding", index_params=index_params)
-        collection.load()
-        print("Index created and collection loaded!")
-    except Exception as e:
-        print(f"Error during insert or index creation: {e}")
+    
+    # Prepare data for insertion (embeddings with optional IDs)
+    data_to_insert = [ids, embeddings] if ids else [embeddings]
+    
+    # Insert the data into the collection
+    collection.insert(data_to_insert)
+    
+    # Flush to ensure data is written
+    collection.flush()
+    
+    print(f"New data successfully inserted into {collection_name}!")
