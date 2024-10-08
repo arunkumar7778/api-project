@@ -3,7 +3,8 @@ uvicorn
 beautifulsoup4
 requests
 milvus
+langchain_google_genai
+numpy
 pymilvus
 -U sentence-transformers
-openai==0.28
 --upgrade pandas
