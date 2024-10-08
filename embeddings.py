@@ -1,43 +1,38 @@
-from wikipedia_scraper import scrape_wikipedia
-from sentence_transformers import SentenceTransformer  # type: ignore
+# embed.py
+from sentence_transformers import SentenceTransformer
+import numpy as np
+from langchain_google_genai import GoogleGenerativeAIEmbeddings
 
-def embed_text(model, paragraphs):
-    """
-    Converts text to embeddings.
+def split_content(content, chunk_size=512):
+    """Split the content into chunks of specified size."""
+    words = content.split()
+    chunks = [' '.join(words[i:i + chunk_size]) for i in range(0, len(words), chunk_size)]
+    return chunks
+
+import numpy as np
+from langchain_google_genai import GoogleGenerativeAIEmbeddings
+
+def embed_content(chunks):
+    """Embed content using Google Generative AI Embeddings."""
+    model = GoogleGenerativeAIEmbeddings(
+        model="models/embedding-001",
+        google_api_key='AIzaSyDFvEzEBCcN8x56hfl5tB8mVK-Wvuij9qk'
+    )
     
-    Parameters:
-    - model: The model used for generating embeddings.
-    - paragraphs: List of text paragraphs to be embedded.
-
-    Returns:
-    - embeddings: Tensor containing the embeddings of the input paragraphs.
-    """
-    if not paragraphs:
-        raise ValueError("The paragraphs list is empty. Please provide valid text.")
+    # Generate embeddings (change this line to the correct method if necessary)
+    embeddings = model.embed_documents(chunks)  # or the correct method name
     
-    try:
-        embeddings = model.encode(paragraphs, convert_to_tensor=True)
-        print(embeddings)  # For debugging; remove in production
-        return embeddings
-    except Exception as e:
-        raise RuntimeError(f"An error occurred while embedding the text: {e}")
+    # Ensure the embeddings are in 2D shape
+    if len(embeddings) > 0 and isinstance(embeddings[0], list):  # Check if it's a list of lists
+        embeddings = np.array(embeddings)  # Convert to a NumPy array
+    else:
+        embeddings = np.array([embeddings])  # Wrap in an extra list to ensure 2D
 
-# Example usage
+    return embeddings.astype('float32')  # Ensure they are float32 for FAISS
+
+
 if __name__ == "__main__":
-    try:
-        # Load your embedding model
-        model = SentenceTransformer('all-MiniLM-L6-v2')  # Use your desired model
-
-        # Scrape Wikipedia
-        url = "https://en.wikipedia.org/wiki/Nobita_Nobi"
-        paragraphs = scrape_wikipedia(url)
-
-        # Ensure the paragraphs are formatted correctly
-        paragraphs = [p for p in paragraphs if isinstance(p, str) and p.strip()]
-
-        # Embed the scraped text
-        embeddings = embed_text(model, paragraphs)
-
-        # You can now use `embeddings` for further processing
-    except Exception as e:
-        print(f"An error occurred: {e}")
+    sample_content = "Your long content here."  # Replace with actual content
+    chunks = split_content(sample_content)
+    embeddings = embed_content(chunks)
+    print(embeddings)  # Print the embeddings
