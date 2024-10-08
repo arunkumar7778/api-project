@@ -31,3 +31,13 @@ This FastAPI application allows users to scrape Wikipedia pages, embed their con
 Features
 - Load Wikipedia Data: Scrapes content from a specified Wikipedia page and stores it as embeddings in a Milvus vector database.
 - Query Data: Users can ask questions based on the loaded content, and the system provides answers using a T5 model.
+
+Dependencies
+The project requires the following libraries:
+-fastapi: For building the API.
+-beautifulsoup4: For scraping Wikipedia pages.
+-requests: To make HTTP requests to Wikipedia.
+-sentence-transformers: To generate embeddings for the content.
+-pymilvus: To interact with Milvus for storing and querying embeddings.
+-numpy: For handling vector calculations.
+-langchain-google-genai: To interface with Google Generative AI (Gemini Pro).
