@@ -1,21 +1,17 @@
 import requests
 from bs4 import BeautifulSoup
-import re
 
-def scrape_wikipedia(url: str):
-    """
-    Extracts the main content from a Wikipedia page and removes numbers.
-    """
+def scrape_wikipedia_page(url):
+    """Scrape content from a Wikipedia page."""
     response = requests.get(url)
-    if response.status_code != 200:
-        raise ValueError(f"Failed to retrieve the page. Status code: {response.status_code}")
-    
-    soup = BeautifulSoup(response.text, 'html.parser')
-    content = soup.find(id="mw-content-text").find_all('p')
-    
-    # Extract text from paragraphs, clean it, and remove numbers
-    paragraphs = [
-        re.sub(r'\[\d+\]', '', p.get_text().strip())  # Remove numbers in square brackets
-        for p in content if p.get_text().strip()
-    ]
-    return paragraphs
+    if response.status_code == 200:
+        soup = BeautifulSoup(response.content, 'html.parser')
+        content = soup.find('div', {'class': 'mw-parser-output'}).get_text()
+        return content
+    else:
+        raise Exception("Failed to retrieve page content.")
+
+if __name__ == "__main__":
+    url = "https://en.wikipedia.org/wiki/Web_scraping"  # Example URL
+    content = scrape_wikipedia_page(url)
+    print(content[:500])  # Print the first 500 characters
